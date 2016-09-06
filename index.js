@@ -5,4 +5,6 @@ console.log(`testing light controller`);
 // lightController.createUser({
 // 	ipaddress: "192.168.1.118"
 // });
-lightController.dimAllLights();
+//lightController.dimAllLights();
+//lightController.performActionOnLights();
+lightController.dimAllLights2();

@@ -4,7 +4,7 @@ let HueApi = require("node-hue-api").HueApi;
 
 
 let test = ()=>{
-		
+
 	let displayBridges = (bridge)=> {
 	    console.log("Hue Bridges Found: " + JSON.stringify(bridge));
 	};
@@ -21,7 +21,7 @@ let findABridge = ()=>{
 		.then((bridges)=>{
 			if(!bridges || !bridges[0]){resolve();}
 			let bridge = bridges[0];//just grab the first bridge found
-			resolve(bridge);		
+			resolve(bridge);
 		})
 		.catch(reject);
 	});
@@ -42,10 +42,10 @@ let connectToBridge = (bridge)=>{
 let findAndConnectToBridge = ()=>{
 	console.log('finding and connecting to bridge.');
 	let username = "J6sizwN7qJz7lDNGXKOschliq2ft-7Q85A-sq35Z";//todo: store from createUser call
-
+  let ipaddress = "192.168.1.118";
 	let promise = new Promise((resolve, reject)=>{
 		console.log(`finding a bridge`);
-		
+
 		findABridge()
 		.then((bridge)=>{
 			resolve(new HueApi(bridge.ipaddress, username));
@@ -54,10 +54,8 @@ let findAndConnectToBridge = ()=>{
 			console.error(`error during findAndConnectToBridge: ${e}`);
 			reject(e);
 		});
-
-	
 	});;
-	return promise;			
+	return promise;
 };
 
 let getLights = (hueApi)=>{
@@ -102,14 +100,10 @@ let dimAllLights = hueApi => {
 			.then((lightsResult)=>{
 				//console.log(`lightResult: ${JSON.stringify(lightsResult, null, 2)}`);
 				let lights = lightsResult.lights;
-				//console.log()
-				// let lightDimPromises = [];
-				// for (let light of lights){
-				// 	console.log(`dimming light id: ${light.id}`);
-				// 	lightDimPromises.push(hueApi.setLightState(light.id, state));
+				let lightDimPromises = lights
+					.filter(light => light.state.on)
+					.map(light=>hueApi.setLightState(light.id, state));
 
-				// }
-				let lightDimPromises = lights.map(light=>hueApi.setLightState(light.id, state));
 				Promise.all(lightDimPromises)
 				.then(values=>{
 					console.log(`done dimming lights`);
@@ -120,10 +114,66 @@ let dimAllLights = hueApi => {
 					reject(e);
 				});
 			})
-		})
-		
-	});
+		});
 
+	});
+	return promise;
+};
+
+let dimAllLights2 = ()=>{
+	let lightStateFunc = (light, state, hueApi)=>{
+		state.bri(100);
+		return state;
+	};
+	return performActionOnLights(undefined, lightStateFunc);
+};
+
+/**
+* Takes care of boiler plate code for connecting to bridge and retrieving lights.
+* Simply provide a filter function for which lights to have lightStateFunc executed for.
+* @param lightFilterFunc - return boolean value indicating whether light should be operated on.
+* @param lightStateFunc - set the state of the light. each included light will be passed to this function.
+*/
+let performActionOnLights = (
+		lightFilterFunc = (light, hueApi) => light.state.on,
+		lightStateFunc = (light, state, hueApi) => {
+			console.log(`running lightStateFunc`);
+			state.bri(0); //turn the light down
+			return state;
+		}
+	) =>{
+
+	let promise = new Promise((resolve, reject)=>{
+		findAndConnectToBridge()
+		.then((hueApi) =>{
+			getLights(hueApi)
+			.then((lightsResult)=>{
+				//filter out lights then call the lightStateFunc for each light included.
+				let lightDimPromises = lightsResult.lights
+					.filter(light => lightFilterFunc(light, hueApi))
+					.map(light=> {
+						let state = lightStateFunc(light, hue.lightState.create(), hueApi);
+						return hueApi.setLightState(light.id, state);
+					});
+
+				//wait for all calls for light state changes to complete.
+				Promise.all(lightDimPromises)
+				.then(values=>{
+					console.log(`done performing action on lights`);
+					resolve();
+				})
+				.catch(e=>{
+					console.error(`error performing action on lights: ${e}`);
+					reject(e);
+				});
+			})
+			.catch(e=>{
+				console.error(`error performing action on lights: ${e}`);
+				reject(e);
+			});
+		});
+
+	});
 	return promise;
 };
 
@@ -144,13 +194,13 @@ let createUser = (bridge)=>{
 	    	reject(error);
 	    })
 	    .done();
-	});	
+	});
 	return promise;
 };
 
 let getBridgeConfig = (host, username)=>{
 	let api = new HueApi(host, username);
-	return api.config();	
+	return api.config();
 };
 
 module.exports = {
@@ -161,5 +211,7 @@ module.exports = {
 	getBridgeConfig,
 	createUser,
 	getLights,
-	dimAllLights
+	dimAllLights,
+	performActionOnLights,
+	dimAllLights2
 };
