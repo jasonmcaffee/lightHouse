@@ -82,40 +82,17 @@ let getLights = (hueApi)=>{
       "swversion": "5.23.1.13452"
     }
 */
-let dimAllLights = hueApi => {
-	let lightState = hue.lightState;
-	let state = lightState.create().bri(0);
-
-	let promise = new Promise((resolve, reject)=>{
-		findAndConnectToBridge()
-		.then((hueApi) =>{
-			getLights(hueApi)
-			.then((lightsResult)=>{
-				//console.log(`lightResult: ${JSON.stringify(lightsResult, null, 2)}`);
-				let lights = lightsResult.lights;
-				let lightDimPromises = lights
-					.filter(light => light.state.on)
-					.map(light=>hueApi.setLightState(light.id, state));
-
-				Promise.all(lightDimPromises)
-				.then(values=>{
-					console.log(`done dimming lights`);
-					resolve();
-				})
-				.catch(e=>{
-					console.error(`error dimming light: ${e}`);
-					reject(e);
-				});
-			})
-		});
-
-	});
-	return promise;
+let dimAllLights = ()=>{
+	let lightStateFunc = (light, state, hueApi)=>{
+		state.bri(0);
+		return state;
+	};
+	return performActionOnLights(undefined, lightStateFunc);
 };
 
-let dimAllLights2 = ()=>{
+let brightenAllLights = ()=>{
 	let lightStateFunc = (light, state, hueApi)=>{
-		state.bri(100);
+		state.bri(255);
 		return state;
 	};
 	return performActionOnLights(undefined, lightStateFunc);
@@ -172,7 +149,7 @@ let performActionOnLights = (
 
 /**
 * You must press the bridge button before calling this function.
-* @return - userId string
+* @return - promise which resolves with a userId string
 */
 let createUser = (bridge)=>{
 	let hue = new HueApi();
@@ -205,5 +182,6 @@ module.exports = {
 	getLights,
 	dimAllLights,
 	performActionOnLights,
-	dimAllLights2
+	dimAllLights,
+	brightenAllLights
 };
