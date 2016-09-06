@@ -2,16 +2,6 @@
 let hue = require("node-hue-api");
 let HueApi = require("node-hue-api").HueApi;
 
-
-let test = ()=>{
-
-	let displayBridges = (bridge)=> {
-	    console.log("Hue Bridges Found: " + JSON.stringify(bridge));
-	};
-
-	hue.nupnpSearch().then(displayBridges).done();
-};
-
 /**
 * Finds and returns the first bridge found.
 */
@@ -38,14 +28,14 @@ let connectToBridge = (bridge)=>{
 
 /**
 * Finds first bridge and connects to it.
+* Resolves passing the connected hueApi.
 */
 let findAndConnectToBridge = ()=>{
 	console.log('finding and connecting to bridge.');
 	let username = "J6sizwN7qJz7lDNGXKOschliq2ft-7Q85A-sq35Z";//todo: store from createUser call
-  let ipaddress = "192.168.1.118";
+  //let ipaddress = "192.168.1.118";
 	let promise = new Promise((resolve, reject)=>{
 		console.log(`finding a bridge`);
-
 		findABridge()
 		.then((bridge)=>{
 			resolve(new HueApi(bridge.ipaddress, username));
@@ -58,6 +48,9 @@ let findAndConnectToBridge = ()=>{
 	return promise;
 };
 
+/**
+* retrieves collection of lights from the hueApi.
+*/
 let getLights = (hueApi)=>{
 	console.log(`getting lights`);
 	return hueApi.lights();
@@ -204,7 +197,6 @@ let getBridgeConfig = (host, username)=>{
 };
 
 module.exports = {
-	test,
 	findABridge,
 	connectToBridge,
 	findAndConnectToBridge,
